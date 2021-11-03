@@ -1,4 +1,4 @@
-package peer
+package p2p
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 )
 
+// Create a p2p host that listen on the specified port
 func MakeNewHost(ctx context.Context, port int) (host.Host, error) {
 	// Generate a key pair for obtaining a valid host ID
 	r := rand.Reader
