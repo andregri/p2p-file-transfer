@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func SendFile(rw *bufio.ReadWriter, path string) {
@@ -90,10 +91,45 @@ func RecvFile(rw *bufio.ReadWriter) {
 		log.Println(err)
 	}
 	file, err := os.Create(filename)
+	if err != nil {
+		log.Println(err)
+	}
+	defer file.Close()
 
 	// Recv file size
+	str, err := rw.ReadString('\n')
+	if err != nil {
+		log.Println(err)
+	}
+	fileSize, err := strconv.Atoi(str)
+	if err != nil {
+		log.Println(err)
+	}
 
 	// Recv file chunks
+	hashFunc := sha1.New()
+
+	for bytesRead := 0; bytesRead < fileSize; {
+		// Receive bytes
+		bytes, err := rw.ReadBytes('\n')
+		if err != nil {
+			log.Println(err)
+		}
+
+		// Write bytes to the file
+		file.Write(bytes)
+
+		// Add to hash
+		hashFunc.Write(bytes)
+	}
 
 	// Recv file hash
+	hashRecv, err := rw.ReadBytes('\n')
+	if err != nil {
+		log.Println(err)
+	}
+	hash := hashFunc.Sum(nil)
+	if string(hash) != string(hashRecv) {
+		log.Println("Hash not equal")
+	}
 }
