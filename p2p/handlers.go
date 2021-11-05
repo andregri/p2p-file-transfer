@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 )
 
 func SendFile(rw *bufio.ReadWriter, path string) {
@@ -98,6 +99,7 @@ func RecvFile(rw *bufio.ReadWriter) {
 
 	// Recv file size
 	str, err := rw.ReadString('\n')
+	str = strings.Replace(str, "\n", "", -1)
 	if err != nil {
 		log.Println(err)
 	}

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"log"
 
 	p2p "github.com/andregri/p2p-file-transfer/p2p"
 	golog "github.com/ipfs/go-log/v2"
+	net "github.com/libp2p/go-libp2p-core/network"
 )
 
 type Config struct {
@@ -42,8 +44,29 @@ func main() {
 	logger.Info(host.Addrs())
 
 	if config.peerId == "" {
-		log.Println("sender")
-	} else {
 		log.Println("receiver")
+
+		host.SetStreamHandler("/filetransfer/1.0.0", func(s net.Stream) {
+			// Create a buffer stream for non blocking read and write
+			rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+
+			go p2p.RecvFile(rw)
+		})
+
+	} else {
+		log.Println("sender")
+
+		id := p2p.Connect(ctx, host, config.peerId)
+
+		// Open stream from this host to the target host
+		s, err := host.NewStream(ctx, id, "/filetransfer/1.0.0")
+		if err != nil {
+			logger.Warn(err)
+			return
+		}
+		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+		go p2p.SendFile(rw, config.filePath)
 	}
+
+	select {}
 }
