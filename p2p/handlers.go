@@ -88,6 +88,7 @@ func SendFile(rw *bufio.ReadWriter, path string) {
 func RecvFile(rw *bufio.ReadWriter) {
 	// Recv filename
 	filename, err := rw.ReadString('\n')
+	filename = strings.Replace(filename, "\n", "", -1)
 	if err != nil {
 		log.Println(err)
 	}
@@ -118,6 +119,8 @@ func RecvFile(rw *bufio.ReadWriter) {
 			log.Println(err)
 		}
 
+		bytesRead += len(bytes)
+
 		// Write bytes to the file
 		file.Write(bytes)
 
@@ -132,6 +135,8 @@ func RecvFile(rw *bufio.ReadWriter) {
 	}
 	hash := hashFunc.Sum(nil)
 	if string(hash) != string(hashRecv) {
-		log.Println("Hash not equal")
+		log.Println("File NOT received correctly: hashes not equal")
+	} else {
+		log.Println("File received correctly: hashes equal")
 	}
 }
