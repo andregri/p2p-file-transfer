@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha1"
 	"fmt"
 	"io"
@@ -37,6 +38,7 @@ func SendFile(rw *bufio.ReadWriter, path string) {
 		log.Println(err)
 	}
 	fileSize := fileStats.Size()
+	fmt.Println(fileSize)
 	_, err = rw.Write([]byte(fmt.Sprintf("%d\n", fileSize)))
 	if err != nil {
 		log.Println(err)
@@ -61,7 +63,7 @@ func SendFile(rw *bufio.ReadWriter, path string) {
 			}
 		}
 
-		_, err = rw.Write(append(buffer, byte('\n')))
+		_, err = rw.Write(buffer)
 		if err != nil {
 			log.Println(err)
 		}
@@ -72,10 +74,13 @@ func SendFile(rw *bufio.ReadWriter, path string) {
 
 		hashFunc.Write(buffer)
 	}
+	fmt.Println("File sent", buffer, len(buffer))
 
 	// Send file hash
 	hash := hashFunc.Sum(nil)
-	_, err = rw.Write(hash)
+	fmt.Println(hash)
+
+	_, err = rw.Write(append(hash, '\n'))
 	if err != nil {
 		log.Println(err)
 	}
@@ -111,31 +116,37 @@ func RecvFile(rw *bufio.ReadWriter) {
 
 	// Recv file chunks
 	hashFunc := sha1.New()
-
+	buf := make([]byte, 512)
 	for bytesRead := 0; bytesRead < fileSize; {
 		// Receive bytes
-		bytes, err := rw.ReadBytes('\n')
+		n, err := rw.Read(buf)
 		if err != nil {
 			log.Println(err)
 		}
 
-		bytesRead += len(bytes)
+		bytesRead += n
 
 		// Write bytes to the file
-		file.Write(bytes)
+		file.Write(buf)
 
 		// Add to hash
-		hashFunc.Write(bytes)
+		hashFunc.Write(buf)
 	}
+	fmt.Println("File received")
 
 	// Recv file hash
 	hashRecv, err := rw.ReadBytes('\n')
 	if err != nil {
 		log.Println(err)
 	}
+	hashRecv = bytes.Trim(hashRecv, "\x00") // remove leading or trailing 0x00
+	hashRecv = hashRecv[:len(hashRecv)-1]   // remove trailing \n
+	fmt.Println("Hash received", hashRecv)
+
 	hash := hashFunc.Sum(nil)
 	if string(hash) != string(hashRecv) {
 		log.Println("File NOT received correctly: hashes not equal")
+		log.Println("Computed hash:", hash)
 	} else {
 		log.Println("File received correctly: hashes equal")
 	}
